@@ -1,8 +1,11 @@
 import pandas as pd
 import numpy as np
+import datetime
 import yaml
+
 import telebot
 from telebot import types
+
 from users_configs.users_config import UsersLib
 from expense_log.expense_logger import ExpenseLogger
 
@@ -61,14 +64,14 @@ def first_choice(message):
 
 def add_expense():
     ikm = types.InlineKeyboardMarkup(row_width=2)
-    button1 = types.InlineKeyboardButton('Продукты', callback_data='add_category_products')
-    button2 = types.InlineKeyboardButton('Развлечения', callback_data='add_category_entertainments')
-    button3 = types.InlineKeyboardButton('Рестораны', callback_data='add_category_restaurants')
-    button4 = types.InlineKeyboardButton('Аптеки', callback_data='add_category_pharmacies')
-    button5 = types.InlineKeyboardButton('Одежда', callback_data='add_category_clothes')
-    button6 = types.InlineKeyboardButton('Дом', callback_data='add_category_home')
-    button7 = types.InlineKeyboardButton('Транспорт', callback_data='add_category_transport')
-    button8 = types.InlineKeyboardButton('Прочее', callback_data='add_category_other')
+    button1 = types.InlineKeyboardButton('Продукты', callback_data='add_category', category='продукты')
+    button2 = types.InlineKeyboardButton('Развлечения', callback_data='add_category', category='развлечения')
+    button3 = types.InlineKeyboardButton('Рестораны', callback_data='add_category', category='рестораны')
+    button4 = types.InlineKeyboardButton('Аптеки', callback_data='add_category', category='аптеки')
+    button5 = types.InlineKeyboardButton('Одежда', callback_data='add_category', category='одежда')
+    button6 = types.InlineKeyboardButton('Дом', callback_data='add_category', category='дом')
+    button7 = types.InlineKeyboardButton('Транспорт', callback_data='add_category', category='транспорт')
+    button8 = types.InlineKeyboardButton('Прочее', callback_data='add_category', category='прочее')
     ikm.add(button1, button2, button3, button4, button5, button6, button7, button8)
     bot.send_message(chat_id, 'Выбери категорию', reply_markup=ikm)
 
@@ -79,14 +82,24 @@ def add_category(category: str):
 
 
 def add_date(message, category):
-    bot.send_message(chat_id, 'Хотите ввести произвольную дату?')
     ikm = types.InlineKeyboardMarkup(row_width=2)
-    button1 = types.InlineKeyboardButton('Оставить текущий день', callback_data='add_expense_with_date')
-    button2 = types.InlineKeyboardButton('Ввести дату', callback_data='add_new_date')
+    button1 = types.InlineKeyboardButton('Оставить текущий день', callback_data='add_expense_with_date',
+                                         category=category, exp_sum=message.text, exp_date=datetime.date.today())
+    button2 = types.InlineKeyboardButton(
+        'Ввести дату', callback_data='get_date', category=category, exp_sum=message.text)
+    ikm.add(button1, button2)
+    bot.send_message(chat_id, 'Хотите ввести произвольную дату?', reply_markup=ikm)
+
+
+def get_date(category: str, exp_sum: str):
+    message = bot.send_message(chat_id, 'Введи дату в формате 1999-12-31')
+    exp_date = message.text
+
 
 
 def add_full_expense(message, category, date):
     expense = message.text
+
 
 
 def add_category_products():
