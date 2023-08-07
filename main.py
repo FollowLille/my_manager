@@ -81,7 +81,7 @@ def add_category(category: str):
 def add_date(message, category):
     bot.send_message(chat_id, 'Хотите ввести произвольную дату?')
     ikm = types.InlineKeyboardMarkup(row_width=2)
-    button1 = types.InlineKeyboardButton('Оставить текущий день', callback_data='add_full_expense')
+    button1 = types.InlineKeyboardButton('Оставить текущий день', callback_data='add_expense_with_date')
     button2 = types.InlineKeyboardButton('Ввести дату', callback_data='add_new_date')
 
 
