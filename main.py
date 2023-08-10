@@ -140,12 +140,12 @@ def get_statistics():
     expenses_book.get_df()
 
 
-def check_date(date: str):
+def check_date(date_value: str):
     try:
-        parse(date)
+        parse(date_value)
         return True
     except:
-        print(f'unvalid date: {date}')
+        print(f'unvalid date: {date_value}')
         return False
 
 
