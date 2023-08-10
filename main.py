@@ -1,7 +1,7 @@
+from datetime import date, timedelta
 from dateutil.parser import parse
 import pandas as pd
 import numpy as np
-import datetime
 import yaml
 import re
 
@@ -99,13 +99,16 @@ def add_category(category: str):
 
 
 def add_date(message, category):
-    ikm = types.InlineKeyboardMarkup(row_width=2)
+    ikm = types.InlineKeyboardMarkup(row_width=1)
     button1 = types.InlineKeyboardButton(
         'Оставить текущий день',
-        callback_data=f'add_expense_with_date_{category}_{message.text}_{datetime.date.today()}')
+        callback_data=f'add_expense_with_date_{category}_{message.text}_{date.today()}')
     button2 = types.InlineKeyboardButton(
+        'Выбрать вчерашний день',
+        callback_data=f'add_expense_with_date_{category}_{message.text}_{date.today() - timedelta(days=1)}')
+    button3 = types.InlineKeyboardButton(
         'Ввести дату', callback_data=f'add_expense_with_date_{category}_{message.text}')
-    ikm.add(button1, button2)
+    ikm.add(button1, button2, button3)
     bot.send_message(chat_id, 'Хотите ввести произвольную дату?', reply_markup=ikm)
 
 
@@ -123,15 +126,18 @@ def get_date(message, category: str, exp_sum: str, user_message=None):
 
 
 def add_expense_with_date(category, exp_sum, exp_date):
-    print('add expense')
     expense = {'user': known_users.get(user_id), 'category': category, 'sum': exp_sum, 'report_date': exp_date}
     expenses_book.add_expense(expense)
-    bot.send_message(chat_id, 'Покупка добавлена')
+    rus_category = expenses_book.category_dict.get(category)
+    cur_date = parse(exp_date).date().strftime('%d.%m.%Y')
+    bot.send_message(
+        chat_id,
+        f'Добавлена трата за {cur_date} в категорию {rus_category} на сумму {exp_sum}.')
     getting_started()
 
 
 def get_statistics():
-    pass
+    expenses_book.get_df()
 
 
 def check_date(date: str):
