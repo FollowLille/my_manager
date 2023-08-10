@@ -1,3 +1,4 @@
+from dateutil.parser import parse
 import pandas as pd
 import numpy as np
 import datetime
@@ -27,7 +28,7 @@ def start(message):
     if not known_users.get(user_id, False):
         message = bot.send_message(chat_id, 'Пользователь не найден, введите имя пользователя')
         bot.register_next_step_handler(message, user_reg)
-    getting_started(message)
+    getting_started()
 
 
 def user_reg(message):
@@ -87,8 +88,9 @@ def callback_data(call):
         category = def_dic.partition('_')[0]
         exp_sum, _, exp_date = def_dic.partition('_')[2].partition('_')
         if not exp_date:
-            get_date(category=category, exp_sum=exp_sum)
-        add_expense_with_date(category=category, exp_sum=exp_sum, exp_date=exp_date)
+            get_date(message=None, category=category, exp_sum=exp_sum)
+        else:
+            add_expense_with_date(category=category, exp_sum=exp_sum, exp_date=exp_date)
 
 
 def add_category(category: str):
@@ -99,24 +101,29 @@ def add_category(category: str):
 def add_date(message, category):
     ikm = types.InlineKeyboardMarkup(row_width=2)
     button1 = types.InlineKeyboardButton(
-        'Оставить текущий день', callback_data=f'add_expense_with_date_{category}_{message.text}_{datetime.date.today()}')
+        'Оставить текущий день',
+        callback_data=f'add_expense_with_date_{category}_{message.text}_{datetime.date.today()}')
     button2 = types.InlineKeyboardButton(
         'Ввести дату', callback_data=f'add_expense_with_date_{category}_{message.text}')
     ikm.add(button1, button2)
     bot.send_message(chat_id, 'Хотите ввести произвольную дату?', reply_markup=ikm)
 
 
-def get_date(category: str, exp_sum: str):
-    message = bot.send_message(chat_id, 'Введи дату в формате 1999-12-31')
-    date_format = '[\d]{4}[.,-/][\d]{2}[.,-/][\d]{2}'
-    if not re.fullmatch(date_format, message.text):
-        message = bot.send_message(chat_id, 'Неправильный формат даты, введи заново')
-        bot.register_next_step_handler(message, get_date, category=category, exp_sum=exp_sum)
-    exp_date = message.text
-    add_expense_with_date(category=category, exp_sum=exp_sum, exp_date=exp_date)
+def get_date(message, category: str, exp_sum: str, user_message=None):
+    if not user_message:
+        message = bot.send_message(chat_id, 'Введи дату в формате 1999-12-31')
+        bot.register_next_step_handler(message, get_date, category=category, exp_sum=exp_sum, user_message=True)
+    else:
+        if not check_date(message.text):
+            message = bot.send_message(chat_id, 'Неправильный формат даты, введи заново')
+            bot.register_next_step_handler(message, get_date, category=category, exp_sum=exp_sum, user_message=True)
+        else:
+            exp_date = message.text
+            add_expense_with_date(category=category, exp_sum=exp_sum, exp_date=exp_date)
 
 
 def add_expense_with_date(category, exp_sum, exp_date):
+    print('add expense')
     expense = {'user': known_users.get(user_id), 'category': category, 'sum': exp_sum, 'report_date': exp_date}
     expenses_book.add_expense(expense)
     bot.send_message(chat_id, 'Покупка добавлена')
@@ -125,6 +132,15 @@ def add_expense_with_date(category, exp_sum, exp_date):
 
 def get_statistics():
     pass
+
+
+def check_date(date: str):
+    try:
+        parse(date)
+        return True
+    except:
+        print(f'unvalid date: {date}')
+        return False
 
 
 bot.infinity_polling(timeout=10, long_polling_timeout=5)
