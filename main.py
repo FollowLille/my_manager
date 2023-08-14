@@ -14,18 +14,19 @@ from expense_log.expense_logger import ExpenseLogger
 with open('secret.yml', 'r') as yml:
     token = yaml.safe_load(yml).get('token')
 bot = telebot.TeleBot(token)
+
 user_id = ''
 chat_id = ''
+properties = {}
 known_users = UsersLib.get_users()
 expenses_book = ExpenseLogger()
-
 
 @bot.message_handler(commands=['start'])
 def start(message):
     global user_id, chat_id
     chat_id = message.chat.id
     user_id = str(chat_id)
-    if not known_users.get(user_id, False):
+    if not known_users.get(user_id, False).get('name'):
         message = bot.send_message(chat_id, 'Пользователь не найден, введите имя пользователя')
         bot.register_next_step_handler(message, user_reg)
     getting_started()
@@ -33,8 +34,6 @@ def start(message):
 
 def user_reg(message):
     global known_users
-    while message.text in known_users.values():
-        message = bot.send_message(chat_id, 'Данное имя уже занято, попробуй другое')
     UsersLib.add_new_user(chat_id, message.text)
     print(f'Add new user with name {message.text}')
     known_users = UsersLib.get_users()
@@ -42,11 +41,12 @@ def user_reg(message):
 
 
 def getting_started():
-    rkm = types.ReplyKeyboardMarkup(resize_keyboard=True, one_time_keyboard=False)
-    rkm.add(types.KeyboardButton('Добавить расходы'), types.KeyboardButton('Вывести статистику'))
+    rkm = types.ReplyKeyboardMarkup(resize_keyboard=True, one_time_keyboard=False, row_width=2)
+    rkm.add(types.KeyboardButton('Добавить расходы'), types.KeyboardButton('Пополнения'),
+            types.KeyboardButton('Вывести статистику'), types.KeyboardButton('Настройки'))
     bot.send_message(chat_id,
-                     f'Привет, {str(known_users[user_id])}!\nЧто хочешь сделать дальше?', reply_markup=rkm,
-                     allow_sending_without_reply=True)
+                     f'Привет, {str(known_users.get(user_id).get("name"))}!\nЧто хочешь сделать дальше?',
+                     reply_markup=rkm, allow_sending_without_reply=True)
 
 
 @bot.message_handler(content_types=['text'])
@@ -58,9 +58,13 @@ def first_choice(message):
         add_expense()
     elif message.text == 'Вывести статистику':
         get_statistics()
+    elif message.text == 'Настройки':
+        get_properties()
+    elif message.text == 'Пополнения':
+        pass
     else:
         bot.send_message(chat_id, 'Неизвестная команда, возвращаю в главное меню')
-        print(f'Unknown command, back to main menu')
+        print(f'Unknown command {message.text}, back to main menu')
         getting_started()
 
 
@@ -91,9 +95,13 @@ def callback_data(call):
             get_date(message=None, category=category, exp_sum=exp_sum)
         else:
             add_expense_with_date(category=category, exp_sum=exp_sum, exp_date=exp_date)
-    elif 'get_stats' in call.data:
+    elif 'get_df' in call.data:
         period = call.data.rpartition('_')[2]
-        get_stats_by_period(period=period)
+        get_df_by_period(period=period)
+    elif 'get_name' in call.data:
+        get_name()
+    elif 'mine' in call.data:
+        change_vision_on_expenses(call.data.partition('_')[0])
 
 
 def add_category(category: str):
@@ -129,7 +137,7 @@ def get_date(message, category: str, exp_sum: str, user_message=None):
 
 
 def add_expense_with_date(category, exp_sum, exp_date):
-    expense = {'user': known_users.get(user_id), 'category': category, 'sum': exp_sum, 'report_date': exp_date}
+    expense = {'user': user_id, 'category': category, 'sum': exp_sum, 'report_date': exp_date}
     expenses_book.add_expense(expense)
     rus_category = expenses_book.category_dict.get(category)
     cur_date = parse(exp_date).date().strftime('%d.%m.%Y')
@@ -141,16 +149,68 @@ def add_expense_with_date(category, exp_sum, exp_date):
 
 def get_statistics():
     ikm = types.InlineKeyboardMarkup(row_width=2)
-    button1 = types.InlineKeyboardButton('Статистика за день', callback_data='get_stats_daily')
-    button2 = types.InlineKeyboardButton('Статистика за неделю', callback_data='get_stats_weekly')
-    button3 = types.InlineKeyboardButton('Статистика за месяц', callback_data='get_stats_monthly')
-    button4 = types.InlineKeyboardButton('Статистика за год', callback_data='get_stats_yearly')
+    button1 = types.InlineKeyboardButton('Статистика за день', callback_data='get_df_daily')
+    button2 = types.InlineKeyboardButton('Статистика за неделю', callback_data='get_df_weekly')
+    button3 = types.InlineKeyboardButton('Статистика за месяц', callback_data='get_df_monthly')
+    button4 = types.InlineKeyboardButton('Статистика за год', callback_data='get_df_yearly')
     ikm.add(button1, button2, button3, button4)
     bot.send_message(chat_id, 'Выбери период', reply_markup=ikm)
 
 
-def get_stats_by_period(period: str):
-    df = expenses_book.get_df()
+def get_df_by_period(period: str):
+    df = expenses_book.get_df(period)
+    if known_users.get(user_id).get('vision') == 'my':
+        df = df[df['user'] == chat_id]
+    print(df)
+    if not df.empty:
+        get_stats_by_df(df)
+    else:
+        bot.send_message(user_id, 'Данные за этот период отсутствуют')
+
+
+def get_stats_by_df(df: pd.DataFrame):
+    grouped_df = df.groupby('category').agg({'total_sum': 'sum', 'category': 'count'}).sort_values('total_sum',
+                                                                                                   ascending=False)
+    grouped_df = grouped_df[grouped_df['total_sum'] > 0]
+    for category, value in grouped_df.iterrows():
+        stats = f'{category} - {value.total_sum:.0f} р. ({value.category:.0f} шт.)'
+        bot.send_message(user_id, stats)
+    getting_started()
+
+
+def get_properties():
+    ikm = types.InlineKeyboardMarkup(row_width=2)
+    button1 = types.InlineKeyboardButton('Изменить имя', callback_data='get_name')
+    button2 = types.InlineKeyboardButton('Выводить только мои траты', callback_data='only_mine')
+    button3 = types.InlineKeyboardButton('Выводить все траты', callback_data='not_only_mine')
+    ikm.add(button1, button2, button3)
+    bot.send_message(chat_id, 'Доступные команды', reply_markup=ikm)
+
+
+def get_name():
+    message = bot.send_message(chat_id, 'Введите новое имя: ')
+    bot.register_next_step_handler(message, change_name)
+
+
+def change_name(message):
+    global known_users
+    new_name = message.text
+    UsersLib.change_name(chat_id, new_name)
+    known_users = UsersLib.get_users()
+    bot.send_message(chat_id, f'Имя успешно изменено на: {new_name}')
+    getting_started()
+
+
+def change_vision_on_expenses(rule: str):
+    global known_users
+    if rule == 'only':
+        UsersLib.change_vision(chat_id, 'my')
+        bot.send_message(chat_id, 'Теперь видны только твои траты')
+    elif rule == 'not':
+        UsersLib.change_vision(chat_id, 'all')
+        bot.send_message(chat_id, 'Теперь видны все траты')
+    known_users = UsersLib.get_users()
+    getting_started()
 
 
 def check_date(date_value: str):
