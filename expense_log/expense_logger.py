@@ -34,10 +34,10 @@ class ExpenseLogger:
         pd.DataFrame.to_csv(self.data, NAME, index=False, header=False)
         self.__reopen_file()
 
-    def get_df(self):
+    def get_df(self) -> pd.DataFrame:
         df = pd.read_csv(NAME, names=COLUMNS)
         df['report_date'] = df['report_date'].apply(parse)
-        print(df)
+        return df
 
     def __reopen_file(self) -> None:
         self.data = pd.read_csv(NAME, names=COLUMNS)

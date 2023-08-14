@@ -91,6 +91,9 @@ def callback_data(call):
             get_date(message=None, category=category, exp_sum=exp_sum)
         else:
             add_expense_with_date(category=category, exp_sum=exp_sum, exp_date=exp_date)
+    elif 'get_stats' in call.data:
+        period = call.data.rpartition('_')[2]
+        get_stats_by_period(period=period)
 
 
 def add_category(category: str):
@@ -137,7 +140,17 @@ def add_expense_with_date(category, exp_sum, exp_date):
 
 
 def get_statistics():
-    expenses_book.get_df()
+    ikm = types.InlineKeyboardMarkup(row_width=2)
+    button1 = types.InlineKeyboardButton('Статистика за день', callback_data='get_stats_daily')
+    button2 = types.InlineKeyboardButton('Статистика за неделю', callback_data='get_stats_weekly')
+    button3 = types.InlineKeyboardButton('Статистика за месяц', callback_data='get_stats_monthly')
+    button4 = types.InlineKeyboardButton('Статистика за год', callback_data='get_stats_yearly')
+    ikm.add(button1, button2, button3, button4)
+    bot.send_message(chat_id, 'Выбери период', reply_markup=ikm)
+
+
+def get_stats_by_period(period: str):
+    df = expenses_book.get_df()
 
 
 def check_date(date_value: str):
