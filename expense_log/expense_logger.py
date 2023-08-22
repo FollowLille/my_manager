@@ -3,7 +3,7 @@ from dataclasses import dataclass
 from dateutil.parser import parse
 from datetime import date, datetime, timedelta
 
-COLUMNS = ['user', 'category', 'total_sum', 'report_date']
+COLUMNS = ['user', 'category', 'total_sum', 'report_date', 'tags']
 NAME = 'my_manager/expense_log/expenses.csv'
 pd.options.mode.chained_assignment = None
 
@@ -29,7 +29,8 @@ class ExpenseLogger:
         expense_ = {'user': expense.get('user'),
                     'category': expense.get('category'),
                     'total_sum': expense.get('total_sum'),
-                    'report_date': expense.get('report_date')}
+                    'report_date': expense.get('report_date'),
+                    'tags': expense.get('tags').replace(' ', '').split(',')}
         df = pd.DataFrame([expense_])
         self.data = self.data.append(df)
         pd.DataFrame.to_csv(self.data, NAME, index=False, header=False)
@@ -44,9 +45,6 @@ class ExpenseLogger:
     @staticmethod
     def __filter_df_by_period(df: pd.DataFrame, period: str) -> pd.DataFrame:
         current_date = datetime.combine(date.today(), datetime.min.time())
-        current_week = current_date.isocalendar()[1]
-        current_month = datetime.now().month
-        current_year = datetime.now().year
         df['week'] = df['report_date'].apply(lambda x: x.isocalendar()[1])
         df['month'] = df['report_date'].apply(lambda x: x.month)
         df['year'] = df['report_date'].apply(lambda x: x.year)

@@ -1,9 +1,8 @@
 from datetime import date, timedelta
 from dateutil.parser import parse
+from keyboa import Keyboa, Button
 import pandas as pd
-import numpy as np
 import yaml
-import re
 
 import telebot
 from telebot import types
@@ -20,6 +19,7 @@ chat_id = ''
 properties = {}
 known_users = UsersLib.get_users()
 expenses_book = ExpenseLogger()
+
 
 @bot.message_handler(commands=['start'])
 def start(message):
@@ -89,12 +89,13 @@ def callback_data(call):
         add_category(category)
     elif 'add_expense_with_date' in call.data:
         def_dic = call.data.replace('add_expense_with_date_', '')
-        category = def_dic.partition('_')[0]
-        exp_sum, _, exp_date = def_dic.partition('_')[2].partition('_')
+        category, _, sum_date_tags_str = def_dic.partition('_')
+        tags, _, sum_date_str = sum_date_tags_str.partition('_')
+        exp_sum, _, exp_date = sum_date_str.partition('_')
         if not exp_date:
-            get_date(message=None, category=category, exp_sum=exp_sum)
+            get_date(message=None, category=category, exp_sum=exp_sum, tags=tags)
         else:
-            add_expense_with_date(category=category, exp_sum=exp_sum, exp_date=exp_date)
+            add_expense_with_date(category=category, exp_sum=exp_sum, exp_date=exp_date, tags=tags)
     elif 'get_df' in call.data:
         period = call.data.rpartition('_')[2]
         get_df_by_period(period=period)
@@ -106,38 +107,46 @@ def callback_data(call):
 
 def add_category(category: str):
     message = bot.send_message(chat_id, 'Введи сумму в формате 1999.99')
-    bot.register_next_step_handler(message, add_date, category=category)
+    bot.register_next_step_handler(message, add_sum(), category=category)
 
 
-def add_date(message, category):
+def add_sum(message, category):
+    cur_sum = message.text
+    message = bot.send_message(chat_id, 'Добавьте теги (краткое описание, в одно слово)')
+    bot.register_next_step_handler(message, add_date(), category=category, cur_sum=cur_sum)
+
+
+def add_date(message, category, cur_sum):
     ikm = types.InlineKeyboardMarkup(row_width=1)
     button1 = types.InlineKeyboardButton(
         'Оставить текущий день',
-        callback_data=f'add_expense_with_date_{category}_{message.text}_{date.today()}')
+        callback_data=f'add_expense_with_date_{category}_{message.text}_{cur_sum}_{date.today()}')
     button2 = types.InlineKeyboardButton(
         'Выбрать вчерашний день',
-        callback_data=f'add_expense_with_date_{category}_{message.text}_{date.today() - timedelta(days=1)}')
+        callback_data=f'add_expense_with_date_{category}_{message.text}_{cur_sum}_{date.today() - timedelta(days=1)}')
     button3 = types.InlineKeyboardButton(
-        'Ввести дату', callback_data=f'add_expense_with_date_{category}_{message.text}')
+        'Ввести дату', callback_data=f'add_expense_with_date_{category}_{message.text}_{cur_sum}')
     ikm.add(button1, button2, button3)
     bot.send_message(chat_id, 'Хотите ввести произвольную дату?', reply_markup=ikm)
 
 
-def get_date(message, category: str, exp_sum: str, user_message=None):
+def get_date(message, category: str, exp_sum: str, tags: str, user_message=None):
     if not user_message:
         message = bot.send_message(chat_id, 'Введи дату в формате 1999-12-31')
-        bot.register_next_step_handler(message, get_date, category=category, exp_sum=exp_sum, user_message=True)
+        bot.register_next_step_handler(message, get_date, category=category, exp_sum=exp_sum, tags=tags,
+                                       user_message=True)
     else:
         if not check_date(message.text):
             message = bot.send_message(chat_id, 'Неправильный формат даты, введи заново')
-            bot.register_next_step_handler(message, get_date, category=category, exp_sum=exp_sum, user_message=True)
+            bot.register_next_step_handler(message, get_date, category=category, exp_sum=exp_sum, tags=tags,
+                                           user_message=True)
         else:
             exp_date = message.text
-            add_expense_with_date(category=category, exp_sum=exp_sum, exp_date=exp_date)
+            add_expense_with_date(category=category, exp_sum=exp_sum, exp_date=exp_date, tags=tags)
 
 
-def add_expense_with_date(category, exp_sum, exp_date):
-    expense = {'user': user_id, 'category': category, 'sum': exp_sum, 'report_date': exp_date}
+def add_expense_with_date(category: str, exp_sum: str, exp_date: str, tags: str):
+    expense = {'user': user_id, 'category': category, 'sum': exp_sum, 'report_date': exp_date, 'tags': tags}
     expenses_book.add_expense(expense)
     rus_category = expenses_book.category_dict.get(category)
     cur_date = parse(exp_date).date().strftime('%d.%m.%Y')
@@ -154,7 +163,8 @@ def get_statistics():
     button3 = types.InlineKeyboardButton('Статистика за месяц', callback_data='get_df_monthly')
     button4 = types.InlineKeyboardButton('Статистика за год', callback_data='get_df_yearly')
     ikm.add(button1, button2, button3, button4)
-    bot.send_message(chat_id, 'Выбери период', reply_markup=ikm)
+    message = bot.send_message(chat_id, 'Выбери период', reply_markup=ikm)
+    bot.delete_message(chat_id, message.id)
 
 
 def get_df_by_period(period: str):
