@@ -45,6 +45,9 @@ class ExpenseLogger:
     @staticmethod
     def __filter_df_by_period(df: pd.DataFrame, period: str) -> pd.DataFrame:
         current_date = datetime.combine(date.today(), datetime.min.time())
+        current_week = current_date.isocalendar()[1]
+        current_month = datetime.now().month
+        current_year = datetime.now().year
         df['week'] = df['report_date'].apply(lambda x: x.isocalendar()[1])
         df['month'] = df['report_date'].apply(lambda x: x.month)
         df['year'] = df['report_date'].apply(lambda x: x.year)

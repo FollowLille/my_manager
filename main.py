@@ -107,13 +107,13 @@ def callback_data(call):
 
 def add_category(category: str):
     message = bot.send_message(chat_id, 'Введи сумму в формате 1999.99')
-    bot.register_next_step_handler(message, add_sum(), category=category)
+    bot.register_next_step_handler(message, add_sum, category=category)
 
 
 def add_sum(message, category):
     cur_sum = message.text
     message = bot.send_message(chat_id, 'Добавьте теги (краткое описание, в одно слово)')
-    bot.register_next_step_handler(message, add_date(), category=category, cur_sum=cur_sum)
+    bot.register_next_step_handler(message, add_date, category=category, cur_sum=cur_sum)
 
 
 def add_date(message, category, cur_sum):
@@ -152,7 +152,7 @@ def add_expense_with_date(category: str, exp_sum: str, exp_date: str, tags: str)
     cur_date = parse(exp_date).date().strftime('%d.%m.%Y')
     bot.send_message(
         chat_id,
-        f'Добавлена трата за {cur_date} в категорию {rus_category} на сумму {exp_sum}.')
+        f'Добавлена трата за {cur_date} в категорию {rus_category} на сумму {exp_sum} с тэгом {tags}.')
     getting_started()
 
 
@@ -164,7 +164,7 @@ def get_statistics():
     button4 = types.InlineKeyboardButton('Статистика за год', callback_data='get_df_yearly')
     ikm.add(button1, button2, button3, button4)
     message = bot.send_message(chat_id, 'Выбери период', reply_markup=ikm)
-    bot.delete_message(chat_id, message.id)
+    # bot.delete_message(chat_id, message.id)
 
 
 def get_df_by_period(period: str):
