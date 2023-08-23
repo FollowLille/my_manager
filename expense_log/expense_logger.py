@@ -19,6 +19,7 @@ class ExpenseLogger:
         'restaurant': 'Рестораны',
         'entertainments': 'Развлечения',
         'products': 'Продукты',
+        'replenishment': 'Пополнения',
     }
 
     def __init__(self):
@@ -62,4 +63,4 @@ class ExpenseLogger:
         return df
 
     def __reopen_file(self) -> None:
-        self.data = pd.read_csv(NAME, names=COLUMNS)
+        self.data = pd.read_csv(NAME, names=COLUMNS, index_col=False)

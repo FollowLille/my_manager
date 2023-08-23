@@ -2,7 +2,9 @@ from datetime import date, timedelta
 from dateutil.parser import parse
 from keyboa import Keyboa, Button
 import pandas as pd
+import numpy as np
 import yaml
+import re
 
 import telebot
 from telebot import types
@@ -61,7 +63,7 @@ def first_choice(message):
     elif message.text == 'Настройки':
         get_properties()
     elif message.text == 'Пополнения':
-        pass
+        add_category('replenishment')
     else:
         bot.send_message(chat_id, 'Неизвестная команда, возвращаю в главное меню')
         print(f'Unknown command {message.text}, back to main menu')
@@ -146,13 +148,15 @@ def get_date(message, category: str, exp_sum: str, tags: str, user_message=None)
 
 
 def add_expense_with_date(category: str, exp_sum: str, exp_date: str, tags: str):
-    expense = {'user': user_id, 'category': category, 'sum': exp_sum, 'report_date': exp_date, 'tags': tags}
+    expense = {'user': user_id, 'category': category, 'total_sum': exp_sum, 'report_date': exp_date, 'tags': tags}
     expenses_book.add_expense(expense)
     rus_category = expenses_book.category_dict.get(category)
     cur_date = parse(exp_date).date().strftime('%d.%m.%Y')
-    bot.send_message(
-        chat_id,
-        f'Добавлена трата за {cur_date} в категорию {rus_category} на сумму {exp_sum} с тэгом {tags}.')
+    if category == 'replenishment':
+        bot.send_message(chat_id, f'Добавлено пополнение за {cur_date} на сумму {exp_sum} с тэгом {tags}')
+    else:
+        bot.send_message(chat_id,f'Добавлена трата за {cur_date} в категорию {rus_category} на сумму {exp_sum} с тэгом {tags}.')
+
     getting_started()
 
 
@@ -163,15 +167,13 @@ def get_statistics():
     button3 = types.InlineKeyboardButton('Статистика за месяц', callback_data='get_df_monthly')
     button4 = types.InlineKeyboardButton('Статистика за год', callback_data='get_df_yearly')
     ikm.add(button1, button2, button3, button4)
-    message = bot.send_message(chat_id, 'Выбери период', reply_markup=ikm)
-    # bot.delete_message(chat_id, message.id)
+    bot.send_message(chat_id, 'Выбери период', reply_markup=ikm)
 
 
 def get_df_by_period(period: str):
     df = expenses_book.get_df(period)
     if known_users.get(user_id).get('vision') == 'my':
         df = df[df['user'] == chat_id]
-    print(df)
     if not df.empty:
         get_stats_by_df(df)
     else:
@@ -182,9 +184,17 @@ def get_stats_by_df(df: pd.DataFrame):
     grouped_df = df.groupby('category').agg({'total_sum': 'sum', 'category': 'count'}).sort_values('total_sum',
                                                                                                    ascending=False)
     grouped_df = grouped_df[grouped_df['total_sum'] > 0]
+    stats = 'Траты: \n'
     for category, value in grouped_df.iterrows():
-        stats = f'{category} - {value.total_sum:.0f} р. ({value.category:.0f} шт.)'
-        bot.send_message(user_id, stats)
+        if category == 'Пополнения':
+            continue
+        else:
+            stats += f'{category} - {value.total_sum:.0f} р. ({value.category:.0f} шт.)\n'
+    repl_df = grouped_df.loc[grouped_df.index == 'Пополнения']
+    stats += '\nПополнения:\n'
+    for category, value in repl_df.iterrows():
+        stats += f'{value.total_sum:.0f} р. ({value.category:.0f} шт.)\n'
+    bot.send_message(user_id, stats)
     getting_started()
 
 
