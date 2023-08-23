@@ -61,7 +61,7 @@ def first_choice(message):
     elif message.text == 'Настройки':
         get_properties()
     elif message.text == 'Пополнения':
-        pass
+        add_category('replenishment')
     else:
         bot.send_message(chat_id, 'Неизвестная команда, возвращаю в главное меню')
         print(f'Unknown command {message.text}, back to main menu')
@@ -137,13 +137,15 @@ def get_date(message, category: str, exp_sum: str, user_message=None):
 
 
 def add_expense_with_date(category, exp_sum, exp_date):
-    expense = {'user': user_id, 'category': category, 'sum': exp_sum, 'report_date': exp_date}
+    expense = {'user': user_id, 'category': category, 'total_sum': exp_sum, 'report_date': exp_date}
     expenses_book.add_expense(expense)
     rus_category = expenses_book.category_dict.get(category)
     cur_date = parse(exp_date).date().strftime('%d.%m.%Y')
-    bot.send_message(
-        chat_id,
-        f'Добавлена трата за {cur_date} в категорию {rus_category} на сумму {exp_sum}.')
+    if category == 'replenishment':
+        bot.send_message(chat_id, f'Добавлено пополнение за {cur_date} на сумму {exp_sum}')
+    else:
+        bot.send_message(chat_id,f'Добавлена трата за {cur_date} в категорию {rus_category} на сумму {exp_sum}.')
+
     getting_started()
 
 
