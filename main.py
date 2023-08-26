@@ -14,7 +14,7 @@ from expense_log.expense_logger import ExpenseLogger
 #     with open('secret.yml', 'r') as yml:
 #       token = yaml.safe_load(yml).get('token')
 # except:
-token = input('token: ')
+token = '6553638581:AAGuOEd01hGkk6okrLXSDd--sh0QXXIOfrc'
 bot = telebot.TeleBot(token)
 
 user_id = ''
