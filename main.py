@@ -2,7 +2,7 @@ from datetime import date, timedelta
 from dateutil.parser import parse
 from keyboa import Keyboa, Button
 import pandas as pd
-import yaml
+# import yaml
 
 import telebot
 from telebot import types
@@ -10,11 +10,11 @@ from telebot import types
 from users_configs.users_config import UsersLib
 from expense_log.expense_logger import ExpenseLogger
 
-try:
-    with open('secret.yml', 'r') as yml:
-      token = yaml.safe_load(yml).get('token')
-except:
-    token = input('token: ')
+# try:
+#     with open('secret.yml', 'r') as yml:
+#       token = yaml.safe_load(yml).get('token')
+# except:
+token = input('token: ')
 bot = telebot.TeleBot(token)
 
 user_id = ''
