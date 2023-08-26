@@ -2,9 +2,7 @@ from datetime import date, timedelta
 from dateutil.parser import parse
 from keyboa import Keyboa, Button
 import pandas as pd
-import numpy as np
 import yaml
-import re
 
 import telebot
 from telebot import types
@@ -103,7 +101,7 @@ def callback_data(call):
         get_df_by_period(period=period)
     elif 'get_name' in call.data:
         get_name()
-    elif 'mine' in call.data:
+    elif 'mine_stats' in call.data:
         change_vision_on_expenses(call.data.partition('_')[0])
 
 
@@ -201,8 +199,8 @@ def get_stats_by_df(df: pd.DataFrame):
 def get_properties():
     ikm = types.InlineKeyboardMarkup(row_width=2)
     button1 = types.InlineKeyboardButton('Изменить имя', callback_data='get_name')
-    button2 = types.InlineKeyboardButton('Выводить только мои траты', callback_data='only_mine')
-    button3 = types.InlineKeyboardButton('Выводить все траты', callback_data='not_only_mine')
+    button2 = types.InlineKeyboardButton('Выводить только мои траты', callback_data='only_mine_stats')
+    button3 = types.InlineKeyboardButton('Выводить все траты', callback_data='not_only_mine_stats')
     ikm.add(button1, button2, button3)
     bot.send_message(chat_id, 'Доступные команды', reply_markup=ikm)
 
