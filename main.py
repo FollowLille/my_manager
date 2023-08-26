@@ -10,8 +10,11 @@ from telebot import types
 from users_configs.users_config import UsersLib
 from expense_log.expense_logger import ExpenseLogger
 
-with open('secret.yml', 'r') as yml:
-    token = yaml.safe_load(yml).get('token')
+try:
+    with open('secret.yml', 'r') as yml:
+      token = yaml.safe_load(yml).get('token')
+except:
+    token = input('token: ')
 bot = telebot.TeleBot(token)
 
 user_id = ''
