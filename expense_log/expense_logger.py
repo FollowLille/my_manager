@@ -4,7 +4,7 @@ from dateutil.parser import parse
 from datetime import date, datetime, timedelta
 
 COLUMNS = ['user', 'category', 'total_sum', 'report_date', 'tags']
-NAME = 'my_manager/expense_log/expenses.csv'
+NAME = 'expense_log/expenses.csv'
 pd.options.mode.chained_assignment = None
 
 
