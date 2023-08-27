@@ -127,7 +127,7 @@ def add_date(message, category, cur_sum):
     button3 = types.InlineKeyboardButton(
         'Ввести дату', callback_data=f'add_expense_with_date_{category}_{message.text}_{cur_sum}')
     ikm.add(button1, button2, button3)
-    bot.send_message(chat_id, 'Хотите ввести произвольную дату?', reply_markup=ikm)
+    bot.send_message(chat_id, 'Выбери дату', reply_markup=ikm)
 
 
 def get_date(message, category: str, exp_sum: str, tags: str, user_message=None):

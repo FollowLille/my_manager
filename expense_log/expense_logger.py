@@ -33,7 +33,7 @@ class ExpenseLogger:
                     'report_date': expense.get('report_date'),
                     'tags': expense.get('tags').replace(' ', '').split(',')}
         df = pd.DataFrame([expense_])
-        self.data = self.data.append(df)
+        self.data = pd.concat([self.data, df], ignore_index=True)
         pd.DataFrame.to_csv(self.data, NAME, index=False, header=False)
         self.__reopen_file()
 
