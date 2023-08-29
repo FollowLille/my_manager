@@ -83,11 +83,12 @@ def add_expense():
 
 
 @bot.callback_query_handler(func=lambda call: True)
-def callback_data(call):
+def callback_data(call, **kwargs):
     if 'add_category' in call.data:
         category = call.data.rpartition('_')[2]
         add_category(category)
     elif 'add_expense_with_date' in call.data:
+        print(kwargs)
         def_dic = call.data.replace('add_expense_with_date_', '')
         category, _, sum_date_tags_str = def_dic.partition('_')
         tags, _, sum_date_str = sum_date_tags_str.partition('_')
