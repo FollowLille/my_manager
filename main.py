@@ -2,6 +2,7 @@ from datetime import date, timedelta
 from dateutil.parser import parse
 from keyboa import Keyboa, Button
 import pandas as pd
+import json
 import yaml
 
 import telebot
@@ -9,6 +10,7 @@ from telebot import types
 
 from users_configs.users_config import UsersLib
 from expense_log.expense_logger import ExpenseLogger
+from expenses_dict.replace_dict import ReplaceDict
 
 with open('secret.yml', 'r') as yml:
     token = yaml.safe_load(yml).get('token')
@@ -16,10 +18,12 @@ bot = telebot.TeleBot(token)
 
 user_id = ''
 chat_id = ''
+category_path = 'my_manager/expenses_dict/category'
+tags_path = 'my_manager/expenses_dict/tags'
 properties = {}
 known_users = UsersLib.get_users()
 expenses_book = ExpenseLogger()
-
+replacer = ReplaceDict()
 
 @bot.message_handler(commands=['start'])
 def start(message):
@@ -86,12 +90,19 @@ def add_expense():
 def callback_data(call):
     if 'add_category' in call.data:
         category = call.data.rpartition('_')[2]
-        add_category(category)
+        convert_category = replacer.convert(category, category_path)
+        add_category(convert_category)
     elif 'add_expense_with_date' in call.data:
+        print(call.data)
         def_dic = call.data.replace('add_expense_with_date_', '')
-        category, _, sum_date_tags_str = def_dic.partition('_')
-        tags, _, sum_date_str = sum_date_tags_str.partition('_')
+        category_int, _, sum_date_tags_str = def_dic.partition('_')
+        category = replacer.revers_convert(category_int, category_path)
+        tags_str, _, sum_date_str = sum_date_tags_str.partition('_')
+        tags_str = tags_str.replace('[', '').replace(']', '')
+        tags_list = [tag.strip() for tag in tags_str.split(',')]
+        tags = replacer.revers_list_convert(tags_list, tags_path)
         exp_sum, _, exp_date = sum_date_str.partition('_')
+        print(category, exp_sum, tags)
         if not exp_date:
             get_date(message=None, category=category, exp_sum=exp_sum, tags=tags)
         else:
@@ -112,20 +123,23 @@ def add_category(category: str):
 
 def add_sum(message, category):
     cur_sum = message.text
-    message = bot.send_message(chat_id, 'Добавьте теги (краткое описание, в одно слово)')
+    message = bot.send_message(chat_id, 'Добавьте теги (по одному слову, через запятую)')
     bot.register_next_step_handler(message, add_date, category=category, cur_sum=cur_sum)
 
 
 def add_date(message, category, cur_sum):
     ikm = types.InlineKeyboardMarkup(row_width=1)
+    tags = message.text.split(',')
+    tags_list = [tag.strip() for tag in tags]
+    converted_tags = replacer.list_convert(tags_list, tags_path)
     button1 = types.InlineKeyboardButton(
         'Оставить текущий день',
-        callback_data=f'add_expense_with_date_{category}_{message.text}_{cur_sum}_{date.today()}')
+        callback_data=f'add_expense_with_date_{category}_{converted_tags}_{cur_sum}_{date.today()}')
     button2 = types.InlineKeyboardButton(
         'Выбрать вчерашний день',
-        callback_data=f'add_expense_with_date_{category}_{message.text}_{cur_sum}_{date.today() - timedelta(days=1)}')
+        callback_data=f'add_expense_with_date_{category}_{converted_tags}_{cur_sum}_{date.today() - timedelta(days=1)}')
     button3 = types.InlineKeyboardButton(
-        'Ввести дату', callback_data=f'add_expense_with_date_{category}_{message.text}_{cur_sum}')
+        'Ввести дату', callback_data=f'add_expense_with_date_{category}_{converted_tags}_{cur_sum}')
     ikm.add(button1, button2, button3)
     bot.send_message(chat_id, 'Выбери дату', reply_markup=ikm)
 
@@ -153,7 +167,7 @@ def add_expense_with_date(category: str, exp_sum: str, exp_date: str, tags: str)
     if category == 'replenishment':
         bot.send_message(chat_id, f'Добавлено пополнение за {cur_date} на сумму {exp_sum} с тэгом {tags}')
     else:
-        bot.send_message(chat_id,f'Добавлена трата за {cur_date} в категорию {rus_category} на сумму {exp_sum} с тэгом {tags}.')
+        bot.send_message(chat_id,f'Добавлена трата за {cur_date} в категорию {rus_category} на сумму {exp_sum} с тегом {tags}.')
 
     getting_started()
 

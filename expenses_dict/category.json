@@ -1,11 +1,11 @@
 {
-  "other": "1",
-  "transport": "2",
-  "home": "3",
-  "clothes": "4",
-  "pharmacy": "5",
-  "restaurant": "6",
-  "entertainments": "7",
-  "products": "8",
-  "replenishment" : "9"
+  "other": 1,
+  "transport": 2,
+  "home": 3,
+  "clothes": 4,
+  "pharmacy": 5,
+  "restaurant": 6,
+  "entertainments": 7,
+  "products": 8,
+  "replenishment" : 9
 }

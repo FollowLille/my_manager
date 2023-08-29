@@ -31,7 +31,7 @@ class ExpenseLogger:
                     'category': expense.get('category'),
                     'total_sum': expense.get('total_sum'),
                     'report_date': expense.get('report_date'),
-                    'tags': expense.get('tags').replace(' ', '').split(',')}
+                    'tags': expense.get('tags')}
         df = pd.DataFrame([expense_])
         self.data = pd.concat([self.data, df], ignore_index=True)
         pd.DataFrame.to_csv(self.data, NAME, index=False, header=False)
