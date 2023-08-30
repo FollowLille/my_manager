@@ -125,7 +125,7 @@ def callback_data(call):
             category_int, _, sum_date_tags_str = def_dic.partition('_')
             category = replacer.revers_convert(category_int, category_path)
             tags_str, _, sum_date_str = sum_date_tags_str.partition('_')
-            tags_str = tags_str.replace('[', '').replace(']', '')
+            tags_str = tags_str.replace('[', '').replace(']', '').lower()
             tags_list = [tag.strip() for tag in tags_str.split(',')]
             tags = replacer.revers_list_convert(tags_list, tags_path)
             exp_sum, _, exp_date = sum_date_str.partition('_')
@@ -158,9 +158,13 @@ def add_category(category: str):
 
 def add_sum(message, category):
     try:
-        cur_sum = message.text
+        cur_sum = float(message.text)
         message = bot.send_message(chat_id, 'Добавьте теги (по одному слову, через запятую)')
         bot.register_next_step_handler(message, add_date, category=category, cur_sum=cur_sum)
+    except (TypeError, ValueError) as exc:
+        print(f'Невозможно перевести переменную "{message.text}" в формат float')
+        bot.send_message(chat_id, 'Неверный формат суммы')
+        add_category(category=category)
     except Exception as exc:
         print(exc)
         bot.send_message(chat_id, 'Непонятная ошибка, попробуй заново')
@@ -171,7 +175,7 @@ def add_date(message, category, cur_sum):
     try:
         ikm = types.InlineKeyboardMarkup(row_width=1)
         tags = message.text.split(',')
-        tags_list = [tag.strip() for tag in tags]
+        tags_list = [tag.strip().lower() for tag in tags]
         converted_tags = replacer.list_convert(tags_list, tags_path)
         button1 = types.InlineKeyboardButton(
             'Оставить текущий день',
@@ -306,7 +310,6 @@ def get_name():
         getting_started()
 
 
-
 def change_name(message):
     try:
         global known_users
@@ -319,7 +322,6 @@ def change_name(message):
         print(exc)
         bot.send_message(chat_id, 'Непонятная ошибка, попробуй заново')
         getting_started()
-
 
 
 def change_vision_on_expenses(rule: str):
@@ -337,7 +339,6 @@ def change_vision_on_expenses(rule: str):
         print(exc)
         bot.send_message(chat_id, 'Непонятная ошибка, попробуй заново')
         getting_started()
-
 
 
 def check_date(date_value: str):
