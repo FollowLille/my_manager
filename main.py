@@ -178,8 +178,8 @@ def add_tags(message: types.Message, category: str, sub_category: str):
         bot.register_next_step_handler(message, add_date, category=category, sub_category=sub_category, cur_sum=cur_sum)
     except (TypeError, ValueError) as exc:
         print(f'Невозможно перевести переменную "{message.text}" в формат float')
-        bot.send_message(message.chat.id, 'Неверный формат суммы')
-        add_sum(message=message, category=category, sub_category=sub_category)
+        bot.send_message(message.chat.id, 'Неверный формат суммы, попробуй заново')
+        getting_started(message=message)
     except Exception as exc:
         print(exc)
         bot.send_message(message.chat.id, 'Непонятная ошибка, попробуй заново')
