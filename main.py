@@ -16,8 +16,7 @@ with open('secret.yml', 'r') as yml:
     token = yaml.safe_load(yml).get('token')
 bot = telebot.TeleBot(token)
 
-user_id = ''
-chat_id = ''
+
 category_path = 'my_manager/expenses_dict/category'
 tags_path = 'my_manager/expenses_dict/tags'
 properties = {}
@@ -31,13 +30,10 @@ with open('my_manager/expenses_dict/category.json') as file:
 @bot.message_handler(commands=['start'])
 def start(message: types.Message):
     try:
-        global user_id, chat_id
-        chat_id = message.chat.id
-        user_id = str(chat_id)
-        if not known_users.get(user_id, False).get('name'):
+        if not known_users.get(str(message.chat.id), False).get('name'):
             message = bot.send_message(message.chat.id, 'Пользователь не найден, введите имя пользователя')
             bot.register_next_step_handler(message, user_reg)
-        user_name = known_users.get(user_id, False).get('name')
+        user_name = known_users.get(str(message.chat.id), False).get('name')
         bot.send_message(message.chat.id, f'Привет, {user_name}')
         getting_started(message)
     except Exception as exc:
@@ -75,9 +71,6 @@ def getting_started(message: types.Message):
 @bot.message_handler(content_types=['text'])
 def first_choice(message: types.Message):
     try:
-        global chat_id, user_id
-        chat_id = message.chat.id
-        user_id = str(chat_id)
         if message.text == 'Добавить расходы':
             add_category(message=message)
         elif message.text == 'Вывести статистику':
@@ -87,7 +80,7 @@ def first_choice(message: types.Message):
         elif message.text == 'Пополнения':
             add_sum(message=message, category='p', sub_category='p')
         else:
-            bot.send_message(chat_id, 'Неизвестная команда, возвращаю в главное меню')
+            bot.send_message(message.chat.id, 'Неизвестная команда, возвращаю в главное меню')
             print(f'Unknown command {message.text}, back to main menu')
             getting_started(message)
     except Exception as exc:
@@ -208,7 +201,7 @@ def add_date(message: types.Message, category: str, sub_category: str, cur_sum: 
         button3 = types.InlineKeyboardButton(
             'Ввести дату', callback_data=f'add_expense_with_date_{category}_{sub_category}_{converted_tags}_{cur_sum}_')
         ikm.add(button1, button2, button3)
-        bot.send_message(chat_id, 'Выбери дату', reply_markup=ikm)
+        bot.send_message(message.chat.id, 'Выбери дату', reply_markup=ikm)
     except Exception as exc:
         print(exc)
         bot.send_message(message.chat.id, 'Непонятная ошибка, попробуй заново')
@@ -288,7 +281,7 @@ def get_df_by_period(message: types.Message, period: str):
     try:
         df = expenses_book.get_df(period)
         if known_users.get(str(message.chat.id)).get('vision') == 'my':
-            df = df[df['user'] == chat_id]
+            df = df[df['user'] == message.chat.id]
         if not df.empty:
             get_stats_by_df(message, df)
         else:
