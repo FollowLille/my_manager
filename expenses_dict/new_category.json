@@ -1,0 +1,74 @@
+{
+  "Продукты": {
+    "id": 0,
+    "sub_categories": {
+      "Супермаркеты": {"child_id": 0, "parent_id": 0},
+      "Доставка": {"child_id": 1, "parent_id": 0},
+      "Прочее": {"child_id": 2, "parent_id": 0}
+    }
+  },
+  "Здоровье и красота": {
+    "id": 1,
+    "sub_categories": {
+      "Аптеки": {"child_id": 0, "parent_id": 1},
+      "Больницы": {"child_id": 1, "parent_id": 1},
+      "Косметика": {"child_id": 2, "parent_id": 1},
+      "Маникюр": {"child_id": 3, "parent_id": 1},
+      "Фитнес": {"child_id": 4, "parent_id": 1},
+      "Стрижка": {"child_id": 5, "parent_id": 1},
+      "Прочее": {"child_id": 6, "parent_id": 1}
+    }
+  },
+  "Развлечения": {
+    "id": 2,
+    "sub_categories": {
+      "Кино, театры и выставки": {"child_id": 0, "parent_id": 2},
+      "Концерты": {"child_id": 1, "parent_id": 2},
+      "Литература": {"child_id": 2, "parent_id": 2},
+      "Игры": {"child_id": 3, "parent_id": 2},
+      "Прочее": {"child_id": 4, "parent_id": 2}
+    }
+  },
+  "Питание": {
+    "id": 3,
+    "sub_categories": {
+      "Рестораны": {"child_id": 0, "parent_id": 3},
+      "Фастфуды": {"child_id": 1, "parent_id": 3},
+      "Обеды": {"child_id": 2, "parent_id": 3},
+      "Прочее": {"child_id": 3, "parent_id": 3}
+    }
+  },
+  "Одежда": {
+    "id": 4,
+    "sub_categories": {
+      "Одежда": {"child_id": 0, "parent_id": 4},
+      "Обувь": {"child_id": 1, "parent_id": 4},
+      "Аксессуары": {"child_id": 2, "parent_id": 4},
+      "Пошив и ремонт": {"child_id": 3, "parent_id": 4},
+      "Прочее": {"child_id": 4, "parent_id": 4}
+    }
+  },
+  "Дом": {
+    "id": 5,
+    "sub_categories": {
+      "Бытовая химия": {"child_id": 0, "parent_id": 5},
+      "Коммуналка и интернет": {"child_id": 1, "parent_id": 5},
+      "Техника для дома": {"child_id": 2, "parent_id": 5},
+      "Прочее": {"child_id": 3, "parent_id": 5}
+    }
+  },
+  "Транспорт": {
+    "id": 6,
+    "sub_categories": {
+      "Общественный транспорт": {"child_id": 0, "parent_id": 6},
+      "Такси": {"child_id": 1, "parent_id": 6},
+      "Каршеринг": {"child_id": 2, "parent_id": 6},
+      "Билеты": {"child_id": 3, "parent_id": 6},
+      "Прочее": {"child_id": 4, "parent_id": 6}
+    }
+  },
+  "Прочее": {
+  "id": 7,
+  "sub_categories": null
+  }
+}

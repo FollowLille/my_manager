@@ -27,98 +27,103 @@ replacer = ReplaceDict()
 
 
 @bot.message_handler(commands=['start'])
-def start(message):
+def start(message: types.Message):
     try:
         global user_id, chat_id
         chat_id = message.chat.id
         user_id = str(chat_id)
         if not known_users.get(user_id, False).get('name'):
-            message = bot.send_message(chat_id, 'Пользователь не найден, введите имя пользователя')
+            message = bot.send_message(message.chat.id, 'Пользователь не найден, введите имя пользователя')
             bot.register_next_step_handler(message, user_reg)
-        getting_started()
+        getting_started(message)
     except Exception as exc:
         print(exc)
-        bot.send_message(chat_id, 'Непонятная ошибка, попробуй заново')
-        getting_started()
+        bot.send_message(message.chat.id, 'Непонятная ошибка, попробуй заново')
+        getting_started(message)
 
 
-def user_reg(message):
+def user_reg(message: types.Message):
     try:
         global known_users
-        UsersLib.add_new_user(chat_id, message.text)
+        UsersLib.add_new_user(message.chat.id, message.text)
         print(f'Add new user with name {message.text}')
         known_users = UsersLib.get_users()
-        getting_started()
+        getting_started(message)
     except Exception as exc:
         print(exc)
-        bot.send_message(chat_id, 'Непонятная ошибка, попробуй заново')
-        getting_started()
+        bot.send_message(message.chat.id, 'Непонятная ошибка, попробуй заново')
+        getting_started(message)
 
 
-def getting_started():
+def getting_started(message: types.Message = None):
+    if message:
+        chat = message.chat.id
+    else:
+        chat = chat_id
     try:
         rkm = types.ReplyKeyboardMarkup(resize_keyboard=True, one_time_keyboard=False, row_width=2)
         rkm.add(types.KeyboardButton('Добавить расходы'), types.KeyboardButton('Пополнения'),
                 types.KeyboardButton('Вывести статистику'), types.KeyboardButton('Настройки'))
-        bot.send_message(chat_id,
+        bot.send_message(chat,
                          f'Привет, {str(known_users.get(user_id).get("name"))}!\nЧто хочешь сделать дальше?',
                          reply_markup=rkm, allow_sending_without_reply=True)
     except Exception as exc:
         print(exc)
-        bot.send_message(chat_id, 'Непонятная ошибка, попробуй заново')
-        getting_started()
+        bot.send_message(chat, 'Непонятная ошибка, попробуй заново')
+        getting_started(message)
 
 
 @bot.message_handler(content_types=['text'])
-def first_choice(message):
+def first_choice(message: types.Message):
     try:
         global chat_id, user_id
         chat_id = message.chat.id
         user_id = str(chat_id)
         if message.text == 'Добавить расходы':
-            add_expense()
+            add_expense(message=message)
         elif message.text == 'Вывести статистику':
-            get_statistics()
+            get_statistics(message=message)
         elif message.text == 'Настройки':
-            get_properties()
+            get_properties(message=message)
         elif message.text == 'Пополнения':
-            add_category(replacer.get_value_by_key('replenishment', category_path))
+            add_category(message=message, category=replacer.get_value_by_key('replenishment', category_path))
         else:
             bot.send_message(chat_id, 'Неизвестная команда, возвращаю в главное меню')
             print(f'Unknown command {message.text}, back to main menu')
-            getting_started()
+            getting_started(message)
     except Exception as exc:
         print(exc)
-        bot.send_message(chat_id, 'Непонятная ошибка, попробуй заново')
-        getting_started()
+        bot.send_message(message.chat.id, 'Непонятная ошибка, попробуй заново')
+        getting_started(message)
 
 
-def add_expense():
+def add_expense(message: types.Message):
     try:
         ikm = types.InlineKeyboardMarkup(row_width=2)
         button1 = types.InlineKeyboardButton('Продукты', callback_data='add_category_products')
         button2 = types.InlineKeyboardButton('Развлечения', callback_data='add_category_entertainments')
-        button3 = types.InlineKeyboardButton('Рестораны', callback_data='add_category_restaurant')
-        button4 = types.InlineKeyboardButton('Аптеки', callback_data='add_category_pharmacy')
+        button3 = types.InlineKeyboardButton('Питание', callback_data='add_category_restaurant')
+        button4 = types.InlineKeyboardButton('Здоровье и красота', callback_data='add_category_pharmacy')
         button5 = types.InlineKeyboardButton('Одежда', callback_data='add_category_clothes')
         button6 = types.InlineKeyboardButton('Дом', callback_data='add_category_home')
         button7 = types.InlineKeyboardButton('Транспорт', callback_data='add_category_transport')
         button8 = types.InlineKeyboardButton('Прочее', callback_data='add_category_other')
         ikm.add(button1, button2, button3, button4, button5, button6, button7, button8)
-        bot.send_message(chat_id, 'Выбери категорию', reply_markup=ikm)
+        bot.send_message(message.chat.id, 'Выбери категорию', reply_markup=ikm)
     except Exception as exc:
         print(exc)
-        bot.send_message(chat_id, 'Непонятная ошибка, попробуй заново')
-        getting_started()
+        bot.send_message(message.chat.id, 'Непонятная ошибка, попробуй заново')
+        getting_started(message)
 
 
 @bot.callback_query_handler(func=lambda call: True)
 def callback_data(call):
+    print(dir(call))
     try:
         if 'add_category' in call.data:
             category = call.data.rpartition('_')[2]
             convert_category = replacer.convert(category, category_path)
-            add_category(convert_category)
+            add_category(message=None, category=convert_category)
         elif 'add_expense_with_date' in call.data:
             print(call.data)
             def_dic = call.data.replace('add_expense_with_date_', '')
@@ -146,14 +151,18 @@ def callback_data(call):
         getting_started()
 
 
-def add_category(category: str):
+def add_category(message: types.Message = None, category: str = 'replenishment'):
+    if message:
+        chat = message.chat.id
+    else:
+        chat = chat_id
     try:
-        message = bot.send_message(chat_id, 'Введи сумму в формате 1999.99')
+        message = bot.send_message(message.chat.id, 'Введи сумму в формате 1999.99')
         bot.register_next_step_handler(message, add_sum, category=category)
     except Exception as exc:
         print(exc)
-        bot.send_message(chat_id, 'Непонятная ошибка, попробуй заново')
-        getting_started()
+        bot.send_message(message.chat.id, 'Непонятная ошибка, попробуй заново')
+        getting_started(message)
 
 
 def add_sum(message, category):
@@ -163,7 +172,7 @@ def add_sum(message, category):
         bot.register_next_step_handler(message, add_date, category=category, cur_sum=cur_sum)
     except (TypeError, ValueError) as exc:
         print(f'Невозможно перевести переменную "{message.text}" в формат float')
-        bot.send_message(chat_id, 'Неверный формат суммы')
+        bot.send_message(message.chat.id, 'Неверный формат суммы')
         add_category(category=category)
     except Exception as exc:
         print(exc)
@@ -193,7 +202,7 @@ def add_date(message, category, cur_sum):
         getting_started()
 
 
-def get_date(message, category: str, exp_sum: str, tags: str, user_message=None):
+def get_date(message, category: str, exp_sum: str, tags: list, user_message=None):
     try:
         if not user_message:
             message = bot.send_message(chat_id, 'Введи дату в формате 1999-12-31')
@@ -213,7 +222,7 @@ def get_date(message, category: str, exp_sum: str, tags: str, user_message=None)
         getting_started()
 
 
-def add_expense_with_date(category: str, exp_sum: str, exp_date: str, tags: str):
+def add_expense_with_date(category: str, exp_sum: str, exp_date: str, tags: list):
     try:
         expense = {'user': user_id, 'category': category, 'total_sum': exp_sum, 'report_date': exp_date, 'tags': tags}
         expenses_book.add_expense(expense)
@@ -233,7 +242,7 @@ def add_expense_with_date(category: str, exp_sum: str, exp_date: str, tags: str)
         getting_started()
 
 
-def get_statistics():
+def get_statistics(message: types.Message):
     try:
         ikm = types.InlineKeyboardMarkup(row_width=2)
         button1 = types.InlineKeyboardButton('Статистика за день', callback_data='get_df_daily')
@@ -241,10 +250,10 @@ def get_statistics():
         button3 = types.InlineKeyboardButton('Статистика за месяц', callback_data='get_df_monthly')
         button4 = types.InlineKeyboardButton('Статистика за год', callback_data='get_df_yearly')
         ikm.add(button1, button2, button3, button4)
-        bot.send_message(chat_id, 'Выбери период', reply_markup=ikm)
+        bot.send_message(message.chat.id, 'Выбери период', reply_markup=ikm)
     except Exception as exc:
         print(exc)
-        bot.send_message(chat_id, 'Непонятная ошибка, попробуй заново')
+        bot.send_message(message.chat.id, 'Непонятная ошибка, попробуй заново')
         getting_started()
 
 
@@ -286,18 +295,18 @@ def get_stats_by_df(df: pd.DataFrame):
         getting_started()
 
 
-def get_properties():
+def get_properties(message: types.Message):
     try:
         ikm = types.InlineKeyboardMarkup(row_width=2)
         button1 = types.InlineKeyboardButton('Изменить имя', callback_data='get_name')
         button2 = types.InlineKeyboardButton('Выводить только мои траты', callback_data='only_mine_stats')
         button3 = types.InlineKeyboardButton('Выводить все траты', callback_data='not_only_mine_stats')
         ikm.add(button1, button2, button3)
-        bot.send_message(chat_id, 'Доступные команды', reply_markup=ikm)
+        bot.send_message(message.chat.id, 'Доступные команды', reply_markup=ikm)
     except Exception as exc:
         print(exc)
-        bot.send_message(chat_id, 'Непонятная ошибка, попробуй заново')
-        getting_started()
+        bot.send_message(message.chat.id, 'Непонятная ошибка, попробуй заново')
+        getting_started(message)
 
 
 def get_name():
