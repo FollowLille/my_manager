@@ -3,24 +3,13 @@ from dataclasses import dataclass
 from dateutil.parser import parse
 from datetime import date, datetime, timedelta
 
-COLUMNS = ['user', 'category', 'total_sum', 'report_date', 'tags']
+COLUMNS = ['user', 'category', 'sub_category', 'total_sum', 'report_date', 'tags']
 NAME = 'my_manager/expense_log/expenses.csv'
 pd.options.mode.chained_assignment = None
 
 
 @dataclass
 class ExpenseLogger:
-    category_dict = {
-        'other': 'Прочее',
-        'transport': 'Транспорт',
-        'home': 'Дом',
-        'clothes': 'Одежда',
-        'pharmacy': 'Аптеки',
-        'restaurant': 'Рестораны',
-        'entertainments': 'Развлечения',
-        'products': 'Продукты',
-        'replenishment': 'Пополнения',
-    }
 
     def __init__(self):
         self.data = pd.read_csv(NAME, names=COLUMNS, index_col=False)
@@ -29,6 +18,7 @@ class ExpenseLogger:
         self.__reopen_file()
         expense_ = {'user': expense.get('user'),
                     'category': expense.get('category'),
+                    'sub_category': expense.get('sub_category'),
                     'total_sum': expense.get('total_sum'),
                     'report_date': expense.get('report_date'),
                     'tags': expense.get('tags')}
@@ -40,7 +30,6 @@ class ExpenseLogger:
     def get_df(self, period: str) -> pd.DataFrame:
         df = pd.read_csv(NAME, names=COLUMNS)
         df['report_date'] = df['report_date'].apply(parse)
-        df['category'] = df.category.apply(lambda x: self.category_dict.get(x))
         return self.__filter_df_by_period(df, period)[['user', 'category', 'total_sum']]
 
     @staticmethod

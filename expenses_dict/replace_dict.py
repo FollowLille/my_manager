@@ -18,20 +18,24 @@ class ReplaceDict:
 
     @staticmethod
     def _get_last_value(_dict: dict) -> int:
-        if _dict:
-            return _dict.get(max(_dict, key=_dict.get))
-        else:
-            return 0
+        return _dict.get(max(_dict, key=_dict.get))
 
     def get_value_by_key(self, key: str, file_name: str) -> str:
         _dict = self._get_dict(file_name)
-        return _dict.get(key)
+        if 'category' in file_name:
+            return _dict[key].get('id')
+        else:
+            return _dict.get(key)
 
-    def get_key_by_value(self, value: int, file_name: str) -> str:
+    def get_key_by_value(self, value: str, file_name: str) -> str:
         if isinstance(value, str):
             value = int(value)
         _dict = self._get_dict(file_name)
-        return list(_dict.keys())[list(_dict.values()).index(value)]
+        if 'category' in file_name:
+            id_list = [value.get('id') for value in _dict.values()]
+            return list(_dict.keys())[id_list.index(value)]
+        else:
+            return list(_dict.keys())[list(_dict.values()).index(value)]
 
     def add_new_key(self, key: str, file_name: str) -> None:
         _dict = self._get_dict(file_name)
@@ -48,13 +52,26 @@ class ReplaceDict:
             _dict = self._get_dict(file_name)
             return self.get_value_by_key(key, file_name)
 
-    def revers_convert(self, value: int, file_name: str) -> str:
+    def reverse_convert(self, value: str, file_name: str) -> str:
         _dict = self._get_dict(file_name)
         return self.get_key_by_value(value, file_name)
 
     def list_convert(self, _list: list, file_name: str) -> list:
         return [self.convert(key, file_name) for key in _list]
 
-    def revers_list_convert(self, _list: list, file_name: str) -> list:
-        _list = [int(num) for num in _list]
-        return [self.revers_convert(value, file_name) for value in _list]
+    def reverse_list_convert(self, _list: list, file_name: str) -> list:
+        return [self.reverse_convert(value, file_name) for value in _list]
+
+    def convert_subcategories(self, category: str, key: str, file_name: str) -> list:
+        _dict = self._get_dict(file_name)
+        sub_category = _dict.get(category).get('sub_categories').get(key)
+        return [sub_category['parent_id'], sub_category['child_id']]
+
+    def reverse_convert_subcategories(self, category: str, sub_category: str, file_name: str) -> list:
+        _dict = self._get_dict(file_name)
+        id_list = [value.get('id') for value in _dict.values()]
+        category = list(_dict.keys())[id_list.index(int(category))]
+        sub_category_dict = _dict.get(category).get('sub_categories')
+        sub_id_list = [value.get('child_id') for value in sub_category_dict.values()]
+        sub_category = list(sub_category_dict.keys())[sub_id_list.index(int(sub_category))]
+        return [category, sub_category]
