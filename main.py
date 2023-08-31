@@ -215,17 +215,29 @@ def add_date(message: types.Message, category: str, sub_category: str, cur_sum: 
         getting_started(message)
 
 
-def get_date(message: types.Message, category: str, sub_category: str, exp_sum: str, tags: list, user_message=None):
+def get_date(message: types.Message, category: str, sub_category: str, exp_sum: str, tags: list,
+             user_message: bool = None, is_not_first: bool = None):
     try:
         if not user_message:
             message = bot.send_message(message.chat.id, 'Введи дату в формате 1999-12-31')
             bot.register_next_step_handler(message, get_date, category=category, sub_category=sub_category,
-                                           exp_sum=exp_sum, tags=tags, user_message=True)
+                                           exp_sum=exp_sum, tags=tags, user_message=True, is_not_first=False)
         else:
             if not check_date(message.text):
-                message = bot.send_message(chat_id, 'Неправильный формат даты, введи заново')
-                bot.register_next_step_handler(message, get_date, category=category, sub_category=sub_category,
-                                               exp_sum=exp_sum, tags=tags, user_message=True)
+                if not is_not_first:
+                    message = bot.send_message(message.chat.id,
+                                               text='Неправильный формат даты, введи заново\nИспользуй только цифры и символы\nДля отмены введи любую букву\nИли нажми любую кнопку :)''')
+                    bot.register_next_step_handler(message, get_date, category=category, sub_category=sub_category,
+                                                   exp_sum=exp_sum, tags=tags, user_message=True, is_not_first=True)
+                else:
+                    if message.text.replace(' ','').isalpha():
+                        getting_started(message)
+                    else:
+                        message = bot.send_message(message.chat.id,
+                                                   text='Неправильный формат даты, введи заново\nИспользуй только цифры и символы\nДля отмены введи любую букву\nИли нажми любую кнопку :)''')
+                        bot.register_next_step_handler(message, get_date, category=category, sub_category=sub_category,
+                                                       exp_sum=exp_sum, tags=tags, user_message=True, is_not_first=True)
+
             else:
                 exp_date = message.text
                 add_expense_with_date(message=message, category=category, sub_category=sub_category, exp_sum=exp_sum,
