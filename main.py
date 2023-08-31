@@ -244,7 +244,7 @@ def get_date(message: types.Message, category: str, sub_category: str, exp_sum: 
 def add_expense_with_date(message: types.Message, category: str, sub_category: str, exp_sum: str, exp_date: str,
                           tags: list):
     try:
-        expense = {'user': user_id, 'category': category, 'sub_category': sub_category, 'total_sum': exp_sum,
+        expense = {'user': str(message.chat.id), 'category': category, 'sub_category': sub_category, 'total_sum': exp_sum,
                    'report_date': exp_date, 'tags': tags}
         expenses_book.add_expense(expense)
         cur_date = parse(exp_date).date().strftime('%d.%m.%Y')
