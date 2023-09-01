@@ -375,11 +375,11 @@ def change_vision_on_expenses(message: types.Message, rule: str):
 
 
 def group_management(message: types.Message):
-    if 'add' in message:
-        chat_id = message.chat.id
+    chat_id = message.chat.id
+    if 'create' in message:
         check_count_of_group(message)
         message = bot.send_message(chat_id, 'Придумай название для группы')
-    elif 'create' in message:
+    elif 'add' in message:
         pass
     elif 'delete' in message:
         pass
@@ -387,6 +387,8 @@ def group_management(message: types.Message):
 
 def check_count_of_group(message: types.Message) -> int:
     pass
+
+
 def check_date(date_value: str):
     try:
         parse(date_value)
