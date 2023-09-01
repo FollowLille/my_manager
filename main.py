@@ -19,7 +19,6 @@ bot = telebot.TeleBot(token)
 
 category_path = 'my_manager/expenses_dict/category'
 tags_path = 'my_manager/expenses_dict/tags'
-properties = {}
 known_users = UsersLib.get_users()
 expenses_book = ExpenseLogger()
 replacer = ReplaceDict()
@@ -133,9 +132,11 @@ def callback_data(call):
             period = call.data.rpartition('_')[2]
             get_df_by_period(message=call.message, period=period)
         elif 'get_name' in call.data:
-            get_name(call.message)
-        elif 'mine_stats' in call.data:
+            get_name(message=call.message)
+        elif 'stats' in call.data:
             change_vision_on_expenses(message=call.message, rule=call.data.partition('_')[0])
+        elif 'group' in call.data:
+            group_managment(message=call.data)
     except Exception as exc:
         print(exc)
         bot.send_message(call.message.chat.id, 'Непонятная ошибка, попробуй заново')
@@ -321,7 +322,10 @@ def get_properties(message: types.Message):
         button1 = types.InlineKeyboardButton('Изменить имя', callback_data='get_name')
         button2 = types.InlineKeyboardButton('Выводить только мои траты', callback_data='only_mine_stats')
         button3 = types.InlineKeyboardButton('Выводить все траты', callback_data='not_only_mine_stats')
-        ikm.add(button1, button2, button3)
+        button4 = types.InlineKeyboardButton('Создать группу', callback_data='create_group')
+        button5 = types.InlineKeyboardButton('Добавить группу', callback_data='add_group')
+        button6 = types.InlineKeyboardButton('Удалить группу', callback_data='delete_group')
+        ikm.add(button1, button2, button3, button4, button5, button6)
         bot.send_message(message.chat.id, 'Доступные команды', reply_markup=ikm)
     except Exception as exc:
         print(exc)
@@ -370,6 +374,19 @@ def change_vision_on_expenses(message: types.Message, rule: str):
         getting_started(message)
 
 
+def group_managment(message: types.Message):
+    if 'add' in message:
+        chat_id = message.chat.id
+        check_count_of_group(message)
+        message = bot.send_message(chat_id, 'Придумай название для группы')
+    else 'create' in message:
+        pass
+    else 'delete' in message:
+        pass
+
+
+def check_count_of_group(message: types.Message) -> int:
+    pass
 def check_date(date_value: str):
     try:
         parse(date_value)
