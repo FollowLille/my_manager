@@ -374,7 +374,7 @@ def change_vision_on_expenses(message: types.Message, rule: str):
         getting_started(message)
 
 
-def group_managment(message: types.Message):
+def group_management(message: types.Message):
     if 'add' in message:
         chat_id = message.chat.id
         check_count_of_group(message)
