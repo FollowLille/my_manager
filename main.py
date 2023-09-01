@@ -379,9 +379,9 @@ def group_managment(message: types.Message):
         chat_id = message.chat.id
         check_count_of_group(message)
         message = bot.send_message(chat_id, 'Придумай название для группы')
-    else 'create' in message:
+    elif 'create' in message:
         pass
-    else 'delete' in message:
+    elif 'delete' in message:
         pass
 
 
