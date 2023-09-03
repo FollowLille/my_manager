@@ -11,6 +11,7 @@ from telebot import types
 from users_configs.users_config import UsersLib
 from expense_log.expense_logger import ExpenseLogger
 from expenses_dict.replace_dict import ReplaceDict
+from database.database_handler import UserClient
 
 with open('secret.yml', 'r') as yml:
     token = yaml.safe_load(yml).get('token')
@@ -345,7 +346,6 @@ def get_name(message: types.Message):
 
 def change_name(message):
     try:
-        global known_users
         new_name = message.text
         UsersLib.change_name(message.chat.id, new_name)
         known_users = UsersLib.get_users()
@@ -397,5 +397,7 @@ def check_date(date_value: str):
         print(f'unvalid date: {date_value}')
         return False
 
+def group_managment(message):
+    pass
 
 bot.infinity_polling(timeout=10, long_polling_timeout=5)
