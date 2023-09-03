@@ -4,7 +4,8 @@
     "sub_categories": {
       "Супермаркеты": {"child_id": 0, "parent_id": 0},
       "Доставка": {"child_id": 1, "parent_id": 0},
-      "Прочее": {"child_id": 2, "parent_id": 0}
+      "Алкоголь и снеки": {"child_id":  2, "parent_id": 0},
+      "Прочее": {"child_id": 3, "parent_id": 0}
     }
   },
   "Здоровье и красота": {
