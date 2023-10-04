@@ -3,7 +3,6 @@ from dateutil.parser import parse
 from dateutil.relativedelta import relativedelta
 import pandas as pd
 import locale
-import json
 import yaml
 
 import telebot
@@ -11,20 +10,19 @@ from telebot import types
 from keyboa import Keyboa, Button
 
 from expenses_dict.replace_dict import ReplaceDict
-from database.database_handler import UserClient, ExpenseClient, LimitClient
+from database.database_handler import UserClient, ExpenseClient, LimitClient, CategoryClient
 
 with open('./secret.yml', 'r') as yml:
     token = yaml.safe_load(yml).get('token')
 bot = telebot.TeleBot(token)
 
-category_path = 'my_manager/expenses_dict/category'
-tags_path = 'my_manager/expenses_dict/tags'
-user_client = UserClient('my_manager/database/test_db')
-expenses_book = ExpenseClient('my_manager/database/test_db')
-limit_client = LimitClient('my_manager/database/test_db')
-replacer = ReplaceDict()
-with open('my_manager/expenses_dict/category.json') as file:
-    category_dict = json.load(file)
+path_to_db = 'my_manager/database/test_db'
+user_client = UserClient(path_to_db)
+expenses_book = ExpenseClient(path_to_db)
+limit_client = LimitClient(path_to_db)
+category_client = CategoryClient(path_to_db)
+category_dict = category_client.get_categories()
+locale.setlocale(locale.LC_TIME, 'ru_RU.UTF-8')
 
 
 @bot.message_handler(commands=['start'])
@@ -111,22 +109,21 @@ def add_category(message: types.Message):
 def add_category_callback(call):
     try:
         category = call.data.rsplit('_')[2]
-        convert_category = replacer.convert(category, category_path)
-        add_sub_categories(message=call.message, category=convert_category)
+        category_id = category_client.get_category_by_name(category)
+        add_sub_categories(message=call.message, category=category_id)
     except Exception as exc:
         print(exc)
         bot.send_message(call.message.chat.id, 'Непонятная ошибка, попробуй заново')
         getting_started(call.message)
 
 
-def add_sub_categories(message: types.Message, category: str):
+def add_sub_categories(message: types.Message, category: int):
     try:
-        subcategories = category_dict.get(replacer.get_key_by_value(category, category_path))
+        subcategories = category_client.get_subcategories_by_category_id(category)
         ikm = types.InlineKeyboardMarkup(row_width=2)
         button_list = []
-        for sub_cat in subcategories.get('sub_categories'):
-            category = replacer.get_key_by_value(category, category_path)
-            category, sub_category = replacer.convert_subcategories(category, sub_cat, category_path)
+        for sub_cat in subcategories:
+            category, sub_category = category_client.get_subcategories_id_by_name(category, sub_cat)
             button = types.InlineKeyboardButton(text=sub_cat,
                                                 callback_data=f'add_subcategory_{category}_{sub_category}')
             button_list.append(button)
@@ -179,7 +176,7 @@ def add_date(message: types.Message, category: str, sub_category: str, cur_sum: 
         ikm = types.InlineKeyboardMarkup(row_width=1)
         tags = message.text.split(',')
         tags_list = [tag.strip().lower() for tag in tags]
-        converted_tags = replacer.list_convert(tags_list, tags_path)
+        converted_tags = category_client.get_id_by_tags(tags_list)
         button1 = types.InlineKeyboardButton(
             'Оставить текущий день',
             callback_data=f'add_expense_with_date_{category}_{sub_category}_{converted_tags}_{cur_sum}_{date.today()}')
@@ -261,12 +258,12 @@ def add_expense_callback(call):
         def_dic = call.data.replace('add_expense_with_date_', '')
         category, sub_category, tags_str, exp_sum, exp_date = def_dic.split('_')
         if category != 'p':
-            category, sub_category = replacer.reverse_convert_subcategories(category, sub_category, category_path)
+            category, sub_category = category_client.get_name_by_id(category, sub_category)
         else:
             category, sub_category = 'Пополнения', 'Пополнения'
         tags_str = tags_str.replace('[', '').replace(']', '').lower()
         tags_list = [tag.strip() for tag in tags_str.split(',')]
-        tags = replacer.reverse_list_convert(tags_list, tags_path)
+        tags = category_client.get_tags_by_id(tags_list)
         if not exp_date:
             get_date(message=call.message, category=category, sub_category=sub_category, exp_sum=exp_sum, tags=tags)
         else:
@@ -542,7 +539,6 @@ def check_date(date_value: str):
 def get_cur_period(period, interval):
     cur_date = date.today()
     interval = int(interval)
-    locale.setlocale(locale.LC_TIME, 'ru_RU.UTF-8')
     if period == 'daily':
         cur_date = cur_date + timedelta(days=interval)
         cur_date = datetime.strftime(cur_date, '%d %B %Y')
