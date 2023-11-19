@@ -1,8 +1,5 @@
 CREATE TABLE IF NOT EXISTS users_groups (
-user_id INTEGER NOT NULL,
-group_id INTEGER NOT NULL,
-is_user INTEGER NOT NULL,
-is_foreign INTEGER NOT NULL,
-sender_id INTEGER NULL,
+user_1 INTEGER NOT NULL,
+user_2 INTEGER NOT NULL,
 is_accepted INTEGER NOT NULL
 )

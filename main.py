@@ -8,23 +8,27 @@ import yaml
 import telebot
 from telebot import types
 from keyboa import Keyboa, Button
+from polog import log, config, file_writer
 
-from expenses_dict.replace_dict import ReplaceDict
-from database.database_handler import UserClient, ExpenseClient, LimitClient, CategoryClient
+from database.database_handler import UserClient, ExpenseClient, LimitClient, CategoryClient, GroupClient
 
 with open('./secret.yml', 'r') as yml:
     token = yaml.safe_load(yml).get('token')
 bot = telebot.TeleBot(token)
 
-path_to_db = 'my_manager/database/test_db'
+config.add_handlers(file_writer('main_log'))
+
+path_to_db = 'my_manager/database/main_base'
 user_client = UserClient(path_to_db)
 expenses_book = ExpenseClient(path_to_db)
 limit_client = LimitClient(path_to_db)
 category_client = CategoryClient(path_to_db)
 category_dict = category_client.get_categories()
+group_client = GroupClient(path_to_db)
 locale.setlocale(locale.LC_TIME, 'ru_RU.UTF-8')
 
 
+@log
 @bot.message_handler(commands=['start'])
 def start(message: types.Message):
     try:
@@ -36,23 +40,22 @@ def start(message: types.Message):
             bot.send_message(message.chat.id, f'Привет, {user_name}')
             getting_started(message)
     except Exception as exc:
-        print(exc)
         bot.send_message(message.chat.id, 'Непонятная ошибка, попробуй заново')
         getting_started(message)
 
 
+@log
 def user_reg(message: types.Message):
     try:
         user_client.add_user(message.chat.id, message.text)
-        print(f'Add new user with name {message.text}')
         bot.send_message(message.chat.id, f'Добавлен новый пользователь с именем {message.text}')
         getting_started(message)
     except Exception as exc:
-        print(exc)
         bot.send_message(message.chat.id, 'Непонятная ошибка, попробуй заново')
         getting_started(message)
 
 
+@log
 def getting_started(message: types.Message):
     try:
         rkm = types.ReplyKeyboardMarkup(resize_keyboard=True, one_time_keyboard=False, row_width=2)
@@ -62,11 +65,11 @@ def getting_started(message: types.Message):
         bot.send_message(message.chat.id, f'Что хочешь сделать дальше?',
                          reply_markup=rkm, allow_sending_without_reply=True)
     except Exception as exc:
-        print(exc)
         bot.send_message(message.chat.id, 'Непонятная ошибка, попробуй заново')
         getting_started(message)
 
 
+@log
 @bot.message_handler(content_types=['text'])
 def first_choice(message: types.Message):
     try:
@@ -82,14 +85,13 @@ def first_choice(message: types.Message):
             limit_handler(message=message)
         else:
             bot.send_message(message.chat.id, 'Неизвестная команда, возвращаю в главное меню')
-            print(f'Unknown command {message.text}, back to main menu')
             getting_started(message)
     except Exception as exc:
-        print(exc)
         bot.send_message(message.chat.id, 'Непонятная ошибка, попробуй заново')
         getting_started(message)
 
 
+@log
 def add_category(message: types.Message):
     try:
         ikm = types.InlineKeyboardMarkup(row_width=2)
@@ -100,11 +102,11 @@ def add_category(message: types.Message):
         ikm.add(*button_list)
         bot.send_message(message.chat.id, 'Выбери категорию', reply_markup=ikm)
     except Exception as exc:
-        print(exc)
         bot.send_message(message.chat.id, 'Непонятная ошибка, попробуй заново')
         getting_started(message)
 
 
+@log
 @bot.callback_query_handler(func=lambda call: 'add_category' in call.data)
 def add_category_callback(call):
     try:
@@ -112,11 +114,11 @@ def add_category_callback(call):
         category_id = category_client.get_category_by_name(category)
         add_sub_categories(message=call.message, category=category_id)
     except Exception as exc:
-        print(exc)
         bot.send_message(call.message.chat.id, 'Непонятная ошибка, попробуй заново')
         getting_started(call.message)
 
 
+@log
 def add_sub_categories(message: types.Message, category: int):
     try:
         subcategories = category_client.get_subcategories_by_category_id(category)
@@ -130,47 +132,46 @@ def add_sub_categories(message: types.Message, category: int):
         ikm.add(*button_list)
         bot.send_message(message.chat.id, 'Выбери подкатегорию', reply_markup=ikm)
     except Exception as exc:
-        print(exc)
         bot.send_message(message.chat.id, 'Непонятная ошибка, попробуй заново')
         getting_started(message)
 
 
+@log
 @bot.callback_query_handler(func=lambda call: 'add_subcategory' in call.data)
 def add_subcategory_callback(call):
     try:
         category, subcategory = call.data.split('_')[2:]
         add_sum(call.message, category, subcategory)
     except Exception as exc:
-        print(exc)
         bot.send_message(call.message.chat.id, 'Непонятная ошибка, попробуй заново')
         getting_started(call.message)
 
 
+@log
 def add_sum(message: types.Message, category: str, sub_category: str):
     try:
         message = bot.send_message(message.chat.id, 'Введи сумму в формате 1999.99')
         bot.register_next_step_handler(message, add_tags, category=category, sub_category=sub_category)
     except Exception as exc:
-        print(exc)
         bot.send_message(message.chat.id, 'Непонятная ошибка, попробуй заново')
         getting_started(message)
 
 
+@log
 def add_tags(message: types.Message, category: str, sub_category: str):
     try:
         cur_sum = float(message.text)
         message = bot.send_message(message.chat.id, 'Добавьте теги (по одному слову, через запятую)')
         bot.register_next_step_handler(message, add_date, category=category, sub_category=sub_category, cur_sum=cur_sum)
     except (TypeError, ValueError) as exc:
-        print(f'Невозможно перевести переменную "{message.text}" в формат float')
         bot.send_message(message.chat.id, 'Неверный формат суммы, попробуй заново')
         getting_started(message=message)
     except Exception as exc:
-        print(exc)
         bot.send_message(message.chat.id, 'Непонятная ошибка, попробуй заново')
         getting_started(message)
 
 
+@log
 def add_date(message: types.Message, category: str, sub_category: str, cur_sum: float):
     try:
         ikm = types.InlineKeyboardMarkup(row_width=1)
@@ -188,11 +189,11 @@ def add_date(message: types.Message, category: str, sub_category: str, cur_sum: 
         ikm.add(button1, button2, button3)
         bot.send_message(message.chat.id, 'Выбери дату', reply_markup=ikm)
     except Exception as exc:
-        print(exc)
         bot.send_message(message.chat.id, 'Непонятная ошибка, попробуй заново')
         getting_started(message)
 
 
+@log
 def get_date(message: types.Message, category: str, sub_category: str, exp_sum: str, tags: list,
              user_message: bool = None, is_not_first: bool = None):
     try:
@@ -225,11 +226,11 @@ def get_date(message: types.Message, category: str, sub_category: str, exp_sum: 
                 add_expense_with_date(message=message, category=category, sub_category=sub_category, exp_sum=exp_sum,
                                       exp_date=exp_date, tags=tags)
     except Exception as exc:
-        print(exc)
         bot.send_message(message.chat.id, 'Непонятная ошибка, попробуй заново')
         getting_started(message)
 
 
+@log
 def add_expense_with_date(message: types.Message, category: str, sub_category: str, exp_sum: str, exp_date: str,
                           tags: list):
     try:
@@ -238,7 +239,6 @@ def add_expense_with_date(message: types.Message, category: str, sub_category: s
                    'report_date': exp_date, 'tags': tags}
         expenses_book.add_expense(expense)
         cur_date = parse(exp_date).date().strftime('%d.%m.%Y')
-        print(f'add new rows: {expense}')
         if category == 'Пополнения':
             bot.send_message(message.chat.id, f'Добавлено пополнение за {cur_date} на сумму {exp_sum} с тэгом {tags}')
         else:
@@ -247,11 +247,11 @@ def add_expense_with_date(message: types.Message, category: str, sub_category: s
 
         getting_started(message)
     except Exception as exc:
-        print(exc)
         bot.send_message(message.chat.id, 'Непонятная ошибка, попробуй заново')
         getting_started(message)
 
 
+@log
 @bot.callback_query_handler(func=lambda call: 'add_expense_with_date' in call.data)
 def add_expense_callback(call):
     try:
@@ -270,11 +270,11 @@ def add_expense_callback(call):
             add_expense_with_date(message=call.message, category=category, sub_category=sub_category,
                                   exp_sum=exp_sum, exp_date=exp_date, tags=tags)
     except Exception as exc:
-        print(exc)
         bot.send_message(call.message.chat.id, 'Непонятная ошибка, попробуй заново')
         getting_started(call.message)
 
 
+@log
 def get_statistics(message: types.Message):
     try:
         ikm = types.InlineKeyboardMarkup(row_width=2)
@@ -285,22 +285,22 @@ def get_statistics(message: types.Message):
         ikm.add(button1, button2, button3, button4)
         bot.send_message(message.chat.id, 'Выбери период', reply_markup=ikm)
     except Exception as exc:
-        print(exc)
         bot.send_message(message.chat.id, 'Непонятная ошибка, попробуй заново')
         getting_started(message)
 
 
+@log
 @bot.callback_query_handler(func=lambda call: 'get_df' in call.data)
 def add_statistics_callback(call):
     try:
         period = call.data.rpartition('_')[2]
         get_df_by_period(message=call.message, period=period)
     except Exception as exc:
-        print(exc)
         bot.send_message(call.message.chat.id, 'Непонятная ошибка, попробуй заново')
         getting_started(call.message)
 
 
+@log
 def get_df_by_period(message: types.Message, period: str, interval: str = '0', id_to_edit: int = None):
     try:
         df = expenses_book.get_statistics(period, interval)
@@ -308,11 +308,11 @@ def get_df_by_period(message: types.Message, period: str, interval: str = '0', i
             df = df[df['user_id'] == message.chat.id]
         get_stats_by_df(message, df, period, interval, id_to_edit)
     except Exception as exc:
-        print(exc)
         bot.send_message(message.chat.id, 'Непонятная ошибка, попробуй заново')
         getting_started(message)
 
 
+@log
 def get_stats_by_df(message: types.Message, df: pd.DataFrame, period: str, interval: str = '0', id_to_edit: int = None):
     try:
         # Только траты
@@ -339,11 +339,11 @@ def get_stats_by_df(message: types.Message, df: pd.DataFrame, period: str, inter
         else:
             message = bot.edit_message_text(total_msg + stats, message.chat.id, id_to_edit, reply_markup=keyboard())
     except Exception as exc:
-        print(exc)
         bot.send_message(message.chat.id, 'Непонятная ошибка, попробуй заново')
         getting_started(message)
 
 
+@log
 @bot.callback_query_handler(func=lambda call: 'next_button' in call.data or 'previous_button' in call.data)
 def get_df_with_new_period(call):
     try:
@@ -356,11 +356,11 @@ def get_df_with_new_period(call):
             interval += -1
         get_df_by_period(call.message, period, str(interval), id_to_edit=message_id)
     except Exception as exc:
-        print(exc)
         bot.send_message(call.message.chat.id, 'Непонятная ошибка, попробуй заново')
         getting_started(call.message)
 
 
+@log
 def limit_handler(message: types.Message):
     try:
         ikm = types.InlineKeyboardMarkup()
@@ -371,11 +371,11 @@ def limit_handler(message: types.Message):
         ikm.add(button1, button2, button3, button4)
         bot.send_message(message.chat.id, 'Список доступных действий', reply_markup=ikm)
     except Exception as exc:
-        print(exc)
         bot.send_message(message.chat.id, 'Непонятная ошибка, попробуй заново')
         getting_started(message)
 
 
+@log
 @bot.callback_query_handler(func=lambda call: 'limits' in call.data)
 def limit_callback(call):
     try:
@@ -410,7 +410,7 @@ def limit_callback(call):
         elif 'view_on' in call.data:
             limits = limit_client.get_limits(call.message.chat.id)
             expenses = expenses_book.get_statistics('monthly')
-            merged_df = pd.merge(limits, expenses, how = 'left', on='category').fillna(0)
+            merged_df = pd.merge(limits, expenses, how='left', on='category').fillna(0)
             merged_df['limit_sum'] = merged_df['cat_limit'] - merged_df['total_sum']
             stats = 'Итого:\n'
             for index, value in merged_df.iterrows():
@@ -418,11 +418,11 @@ def limit_callback(call):
             bot.send_message(call.message.chat.id, stats)
             getting_started(call.message)
     except Exception as exc:
-        print(exc)
         bot.send_message(call.message, 'Непонятная ошибка, попробуй заново')
         getting_started(call.message)
 
 
+@log
 @bot.callback_query_handler(func=lambda call: 'add_limit_category' in call.data)
 def add_limits(call):
     try:
@@ -430,11 +430,11 @@ def add_limits(call):
         message = bot.send_message(call.message.chat.id, 'Введи сумму')
         bot.register_next_step_handler(message, add_limit_to_db, category=category)
     except Exception as exc:
-        print(exc)
         bot.send_message(call.message.chat.id, 'Непонятная ошибка, попробуй заново')
         getting_started(call.message)
 
 
+@log
 def add_limit_to_db(message, category: str):
     try:
         limit = int(message.text)
@@ -446,11 +446,11 @@ def add_limit_to_db(message, category: str):
             message = bot.send_message(message.chat.id, f'Успешно введен лимит в категории {category} на сумму {limit}')
         getting_started(message)
     except Exception as exc:
-        print(exc)
         bot.send_message(message.chat.id, 'Непонятная ошибка, попробуй заново')
         getting_started(message)
 
 
+@log
 @bot.callback_query_handler(func=lambda call: 'delete_limit_category' in call.data)
 def delete_limit(call):
     try:
@@ -459,25 +459,88 @@ def delete_limit(call):
         bot.send_message(call.message.chat.id, f'Лимит в категории {category} успешно удален')
         getting_started(call.message)
     except Exception as exc:
-        print(exc)
         bot.send_message(call.message.chat.id, 'Непонятная ошибка, попробуй заново')
         getting_started(call.message)
 
 
+@log
 def get_properties(message: types.Message):
     try:
         ikm = types.InlineKeyboardMarkup(row_width=2)
         button1 = types.InlineKeyboardButton('Изменить имя', callback_data='get_name')
         button2 = types.InlineKeyboardButton('Выводить только мои траты', callback_data='only_mine_stats')
-        button3 = types.InlineKeyboardButton('Выводить все траты', callback_data='not_only_mine_stats')
-        ikm.add(button1, button2, button3)
+        button3 = types.InlineKeyboardButton('Выводить все траты моей группы', callback_data='not_only_mine_stats')
+        button4 = types.InlineKeyboardButton('Управление группами', callback_data='group_management')
+        ikm.add(button1, button2, button3, button4)
         bot.send_message(message.chat.id, 'Доступные команды', reply_markup=ikm)
     except Exception as exc:
-        print(exc)
         bot.send_message(message.chat.id, 'Непонятная ошибка, попробуй заново')
         getting_started(message)
 
 
+@log
+@bot.callback_query_handler(func=lambda call: 'group_management' in call.data)
+def add_category_callback(call):
+    try:
+        message = '''Для создания группы с другим пользователем нужно: 
+        1. Передать другому пользователю свой уникальный номер
+        2. Другой пользователь должен открыть раздел "Управление группами" > "Добавить пользователя" и ввести там ваш номер
+        3. Другой пользователь должен передать вам свой номер и вы должны повторить п.2
+        Возможность выводить свои траты или траты группы можно в меню "Настройки" '''
+        bot.send_message(call.message.chat.id, message)
+        bot.send_message(call.message.chat.id, f'Ваш уникальный номер: @{call.message.chat.id}')
+        ikm = types.InlineKeyboardMarkup(row_width=1)
+        button1 = types.InlineKeyboardButton('Добавить пользователя в группу', callback_data='users_group_add')
+        button2 = types.InlineKeyboardButton('Удалить пользователя из группы', callback_data='users_group_delete')
+        ikm.add(button1, button2)
+        bot.send_message(call.message.chat.id, 'Выбери действие:', reply_markup=ikm)
+    except Exception as exc:
+        bot.send_message(call.message.chat.id, 'Непонятная ошибка, попробуй заново')
+        getting_started(call.message)
+
+
+@log
+@bot.callback_query_handler(func=lambda call: 'users_group' in call.data)
+def change_users_group(call):
+    message = call.message
+    try:
+        message = bot.send_message(message.chat.id, 'Введи номер пользователя, которого хотите добавить или удалить')
+        if 'add' in call.data:
+            bot.register_next_step_handler(message, add_user)
+        elif 'delete' in call.data:
+            bot.register_next_step_handler(message, delete_user)
+    except Exception as exc:
+        bot.send_message(message.chat.id, 'Непонятная ошибка, попробуй заново')
+        getting_started(message)
+
+
+@log
+def delete_user(message: types.Message):
+    try:
+        id_to_delete = message.text.replace('@', '')
+        user_id = message.chat.id
+        answer = group_client.delete_user(int(user_id), int(id_to_delete))
+        bot.send_message(message.chat.id, answer)
+        getting_started(message)
+    except Exception as exc:
+        bot.send_message(message.chat.id, 'Непонятная ошибка, попробуй заново')
+        getting_started(message)
+
+
+@log
+def add_user(message: types.Message):
+    try:
+        id_to_add = message.text.replace('@', '')
+        user_id = message.chat.id
+        answer = group_client.add_user(int(user_id), int(id_to_add))
+        bot.send_message(message.chat.id, answer)
+        getting_started(message)
+    except Exception as exc:
+        bot.send_message(message.chat.id, 'Непонятная ошибка, попробуй заново')
+        getting_started(message)
+
+
+@log
 @bot.callback_query_handler(func=lambda call: 'get_name' in call.data or 'mine_stats' in call.data)
 def add_category_callback(call):
     try:
@@ -486,32 +549,32 @@ def add_category_callback(call):
         elif 'mine_stats' in call.data:
             change_vision_on_expenses(message=call.message, rule=call.data.partition('_')[0])
     except Exception as exc:
-        print(exc)
         bot.send_message(call.message.chat.id, 'Непонятная ошибка, попробуй заново')
         getting_started(call.message)
 
 
+@log
 def get_name(message: types.Message):
     try:
         message = bot.send_message(message.chat.id, 'Введите новое имя: ')
         bot.register_next_step_handler(message, change_name)
     except Exception as exc:
-        print(exc)
         bot.send_message(message.chat.id, 'Непонятная ошибка, попробуй заново')
         getting_started(message)
 
 
+@log
 def change_name(message):
     try:
         user_client.change_user_info(user_id=message.chat.id, user_name=message.text)
         bot.send_message(message.chat.id, f'Имя успешно изменено на: {message.text}')
         getting_started(message)
     except Exception as exc:
-        print(exc)
         bot.send_message(message.chat.id, 'Непонятная ошибка, попробуй заново')
         getting_started(message)
 
 
+@log
 def change_vision_on_expenses(message: types.Message, rule: str):
     try:
         if rule == 'only':
@@ -522,20 +585,20 @@ def change_vision_on_expenses(message: types.Message, rule: str):
             bot.send_message(message.chat.id, 'Теперь видны все траты')
         getting_started(message)
     except Exception as exc:
-        print(exc)
         bot.send_message(message.chat.id, 'Непонятная ошибка, попробуй заново')
         getting_started(message)
 
 
+@log
 def check_date(date_value: str):
     try:
         parse(date_value)
         return True
     except:
-        print(f'invalid date: {date_value}')
         return False
 
 
+@log
 def get_cur_period(period, interval):
     cur_date = date.today()
     interval = int(interval)
