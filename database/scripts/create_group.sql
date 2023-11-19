@@ -1,0 +1,5 @@
+CREATE TABLE IF NOT EXISTS users_groups (
+user_1 INTEGER NOT NULL,
+user_2 INTEGER NOT NULL,
+is_accepted INTEGER NOT NULL
+)
